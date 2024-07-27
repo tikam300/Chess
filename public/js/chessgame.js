@@ -42,30 +42,18 @@ const renderBoard = () => {
                 pieceElement.innerText = getPieceUnicode(square);
                 pieceElement.draggable = playerRole === square.color;
 
-               
+               // Mouse events
+               pieceElement.addEventListener("dragstart", handleDragStart);
+               pieceElement.addEventListener("dragend", handleDragEnd);
 
-                pieceElement.addEventListener("dragstart", (e) => {
-                    
-                    if (pieceElement.draggable) {
-                        
-                        draggedPiece = pieceElement;
-                        sourceSquare = { row: rowindex, col: squareindex };
-                        e.dataTransfer.setData("text/plain", "");
-                    }
-                });
-
-                pieceElement.addEventListener("dragend", (e) => {
-                    draggedPiece = null;
-                    sourceSquare = null;
-                });
+                // Touch events
+                pieceElement.addEventListener("touchstart", handleTouchStart);
+                pieceElement.addEventListener("touchend", handleTouchEnd);
 
                 squareElement.appendChild(pieceElement);
             }
 
-            squareElement.addEventListener("dragover", function (e) {
-                e.preventDefault();
-            });
-
+            squareElement.addEventListener("dragover", handleDragOver);
             squareElement.addEventListener("drop", function (e) {
                 e.preventDefault();
                 if (draggedPiece) {
@@ -77,6 +65,9 @@ const renderBoard = () => {
                     handleMove(sourceSquare, targetSquare);
                 }
             });
+
+            // Touch events
+            squareElement.addEventListener("touchmove", handleTouchMove);
 
             boardElement.appendChild(squareElement);
         });
@@ -93,13 +84,22 @@ const renderBoard = () => {
 };
 
 const handleMove = (source, target) => {
+
+    const fromCol = String.fromCharCode(97 + source.col);
+    const fromRow = 8 - source.row;
+    const toCol = String.fromCharCode(97 + target.col);
+    const toRow = 8 - target.row;
+
+    if (isNaN(source.col) || isNaN(source.row) || isNaN(target.col) || isNaN(target.row)) {
+        return;
+    }
+
     const move = {
-        from: `${String.fromCharCode(97 + source.col)}${8 - source.row}`,
-        to: `${String.fromCharCode(97 + target.col)}${8 - target.row}`,
+        from: `${fromCol}${fromRow}`,
+        to: `${toCol}${toRow}`,
         promotion: "q"
     };
 
-   
     socket.emit("move", move);
 };
 
@@ -119,6 +119,78 @@ const getPieceUnicode = (piece) => {
         K: "♔",
     };
     return unicodePieces[piece.type] || "";
+};
+
+const handleDragStart = (e) => {
+    if (e.target.draggable) {
+        draggedPiece = e.target;
+        sourceSquare = {
+            row: parseInt(e.target.parentElement.dataset.row),
+            col: parseInt(e.target.parentElement.dataset.col)
+        };
+        e.dataTransfer.setData("text/plain", "");
+    }
+};
+
+const handleDragEnd = (e) => {
+    draggedPiece = null;
+    sourceSquare = null;
+};
+
+const handleDragOver = (e) => {
+    e.preventDefault();
+};
+
+const handleDrop = (e) => {
+    e.preventDefault();
+    if (draggedPiece) {
+        const targetSquare = {
+            row: parseInt(e.target.dataset.row),
+            col: parseInt(e.target.dataset.col)
+        };
+        handleMove(sourceSquare, targetSquare);
+    }
+};
+
+const handleTouchStart = (e) => {
+    const touch = e.touches[0];
+    draggedPiece = e.target;
+    sourceSquare = {
+        row: parseInt(e.target.parentElement.dataset.row),
+        col: parseInt(e.target.parentElement.dataset.col)
+    };
+    e.target.style.position = 'absolute';
+    e.target.style.zIndex = 1000;
+    moveAt(touch.pageX, touch.pageY);
+};
+
+const handleTouchMove = (e) => {
+    const touch = e.touches[0];
+    e.preventDefault(); // Prevent scrolling
+    moveAt(touch.pageX, touch.pageY);
+};
+
+const handleTouchEnd = (e) => {
+    const touch = e.changedTouches[0];
+    const targetSquare = document.elementFromPoint(touch.clientX, touch.clientY).parentElement;
+
+    if (targetSquare.classList.contains("square")) {
+        const targetPosition = {
+            row: parseInt(targetSquare.dataset.row),
+            col: parseInt(targetSquare.dataset.col)
+        };
+        handleMove(sourceSquare, targetPosition);
+    }
+
+    draggedPiece.style.position = '';
+    draggedPiece.style.zIndex = '';
+    draggedPiece = null;
+    sourceSquare = null;
+};
+
+const moveAt = (pageX, pageY) => {
+    draggedPiece.style.left = pageX - draggedPiece.offsetWidth / 2 + 'px';
+    draggedPiece.style.top = pageY - draggedPiece.offsetHeight / 2 + 'px';
 };
 
 const updateTurnIndicator = () => {
@@ -174,8 +246,6 @@ socket.on("move", function (move) {
     chess.move(move);
     if (playerRole !== null) {
         renderBoard();
-    }else{
-        alert("You are Spectator and Not allowed to move");
     }
 });
 
