@@ -159,8 +159,9 @@ const handleTouchStart = (e) => {
         row: parseInt(e.target.parentElement.dataset.row),
         col: parseInt(e.target.parentElement.dataset.col)
     };
-    e.target.style.position = 'absolute';
-    e.target.style.zIndex = 1000;
+    draggedPiece.classList.add('dragging');
+    draggedPiece.style.position = 'absolute';
+    draggedPiece.style.zIndex = 1000;
     moveAt(touch.pageX, touch.pageY);
 };
 
@@ -172,9 +173,16 @@ const handleTouchMove = (e) => {
 
 const handleTouchEnd = (e) => {
     const touch = e.changedTouches[0];
-    const targetSquare = document.elementFromPoint(touch.clientX, touch.clientY).parentElement;
+    const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+    let targetSquare = null;
 
-    if (targetSquare.classList.contains("square")) {
+    if (targetElement.classList.contains("square")) {
+        targetSquare = targetElement;
+    } else if (targetElement.parentElement.classList.contains("square")) {
+        targetSquare = targetElement.parentElement;
+    }
+
+    if (targetSquare) {
         const targetPosition = {
             row: parseInt(targetSquare.dataset.row),
             col: parseInt(targetSquare.dataset.col)
@@ -182,15 +190,25 @@ const handleTouchEnd = (e) => {
         handleMove(sourceSquare, targetPosition);
     }
 
-    draggedPiece.style.position = '';
-    draggedPiece.style.zIndex = '';
+    if (draggedPiece) {
+        draggedPiece.classList.remove('dragging');
+        draggedPiece.style.left = '';
+        draggedPiece.style.top = '';
+    }
     draggedPiece = null;
     sourceSquare = null;
 };
 
+
 const moveAt = (pageX, pageY) => {
-    draggedPiece.style.left = pageX - draggedPiece.offsetWidth / 2 + 'px';
-    draggedPiece.style.top = pageY - draggedPiece.offsetHeight / 2 + 'px';
+    const chessboardRect = boardElement.getBoundingClientRect();
+    const pieceSize = draggedPiece.offsetWidth;
+
+    const newLeft = Math.min(Math.max(pageX - pieceSize / 2, chessboardRect.left), chessboardRect.right - pieceSize);
+    const newTop = Math.min(Math.max(pageY - pieceSize / 2, chessboardRect.top), chessboardRect.bottom - pieceSize);
+
+    draggedPiece.style.left = `${newLeft - chessboardRect.left}px`;
+    draggedPiece.style.top = `${newTop - chessboardRect.top}px`;
 };
 
 const updateTurnIndicator = () => {

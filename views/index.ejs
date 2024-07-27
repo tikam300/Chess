@@ -29,6 +29,7 @@
     max-width: 600px; /* Limits the maximum width */
     max-height: 600px; /* Limits the maximum height */
     background-color: #b91c1c; /* Background color similar to bg-red-800 */
+    position: relative;
 }
 
 .square {
@@ -51,7 +52,7 @@
 .piece {
     font-size: 8vw; /* Responsive font size */
     cursor: pointer;
-    position: relative;
+    position: absolute;
     user-select: none;
 }
 
@@ -65,9 +66,9 @@
     filter: drop-shadow(0 0 2px rgba(255, 255, 255, 1));
 }
 
-.piece.draggable {
+/* .dragging.piece {
     cursor: grab;
-}
+} */
 
 .dragging {
     opacity: 0.5;
